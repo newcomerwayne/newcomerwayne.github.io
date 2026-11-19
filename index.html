@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Flicker Suppression 調適工具 · Demo</title>
+<title>補償調適工具 · Demo</title>
 <style>
 :root{
   --bg:#E8ECF0; --panel:#FBFCFD; --sunk:#F1F4F7; --ink:#18212B; --muted:#5B6875; --line:#C9D1DA; --line-soft:#DDE3E9;
@@ -167,7 +167,7 @@ dialog pre{margin:0;padding:12px 14px;max-height:70vh;overflow:auto;font:12px/1.
 </head>
 <body>
 <header class="top">
-  <div class="ident"><h1>Flicker Suppression 調適工具</h1><span class="chip">DEMO-DDIC · Page B0 / 10</span></div>
+  <div class="ident"><h1>補償調適工具</h1><span class="chip">DEMO-DDIC · Page B0 / 10</span></div>
   <div class="actions">
     <button class="btn" id="bUndo" title="Ctrl+Z">復原</button>
     <button class="btn" id="bRedo" title="Ctrl+Y">重做</button>
@@ -216,9 +216,9 @@ dialog pre{margin:0;padding:12px 14px;max-height:70vh;overflow:auto;font:12px/1.
     <div class="view" id="vSet" hidden>
       <div class="settings">
         <fieldset>
-          <legend>FS 總開關</legend>
+          <legend>補償總開關</legend>
           <p class="hint">REGISTER C3 · bit7 = 功能開關，bit6 固定為 1</p>
-          <label class="switch"><input type="checkbox" id="fsEn"> 開啟 Flicker Suppression</label>
+          <label class="switch"><input type="checkbox" id="fsEn"> 開啟補償功能</label>
           <legend style="margin-top:14px">門檻設定</legend>
           <p class="hint">REGISTER C4 · 12-bit（0–4095）</p>
           <div id="thdBox"></div>
@@ -368,7 +368,7 @@ function buildRows() {
   add(31, '');
   const bits = S.regs.map(r => r.en ? 1 : 0); while (bits.length < 24) bits.push(0);
   const ae = [0, 1, 2].map(k => bits.slice(k * 8, k * 8 + 8).reduce((a, b) => a * 2 + b, 0));
-  add(32, 'REGISTER,C6,03,' + ae.map(hex2).join(','), '//FS offset enable');
+  add(32, 'REGISTER,C6,03,' + ae.map(hex2).join(','), '//補償 offset 開關');
   add(33, '');
   const aa = S.thd.flatMap(t => [hex2((t >> 8) & 0xFF), hex2(t & 0xFF)]);
   add(34, 'REGISTER,C4,10,' + aa.join(','), '//threshold setting');
@@ -376,12 +376,12 @@ function buildRows() {
   const ab = [0, 1, 2, 3, 4].map(k => hex2(S.dfr[2 * k] * 16 + S.dfr[2 * k + 1]));
   add(36, 'REGISTER,C5,05,' + ab.join(','), '//mode region setting');
   add(37, '');
-  add(38, 'REGISTER,C3,01,' + hex2((S.fs ? 128 : 0) + 64), '//FS enable');
+  add(38, 'REGISTER,C3,01,' + hex2((S.fs ? 128 : 0) + 64), '//補償功能開關');
   if (S.manOut) {
     add(39, '');
-    add(40, '//FS手動觸發功能');
+    add(40, '//補償手動觸發功能');
     add(41, 'REGISTER,F0,03,C3,3C,10');
-    add(42, 'REGISTER,C2,01,' + hex2((S.man ? 128 : 0) + S.scene), '//FS manual trigger');
+    add(42, 'REGISTER,C2,01,' + hex2((S.man ? 128 : 0) + S.scene), '//補償手動觸發');
   }
   return R;
 }
@@ -450,7 +450,7 @@ function buildGrid() {
   h += '</tr></thead><tbody>';
   S.regs.forEach((r, i) => {
     const m = REG_META[i], grp = (i === 6 || i === 12 || i === 20) ? ' grp' : '';
-    h += '<tr data-r="' + i + '" class="' + grp + '"><th class="rh"><label><input type="checkbox" data-en="' + i + '" title="FS offset 開關">'
+    h += '<tr data-r="' + i + '" class="' + grp + '"><th class="rh"><label><input type="checkbox" data-en="' + i + '" title="補償 offset 開關">'
       + '<span class="nm" data-row="' + i + '" title="選取整列">' + m.name.replace(' offset', '') + '</span><span class="ad">R' + m.addr + '</span></label></th>';
     for (let j = 0; j < N; j++) h += '<td data-i="' + i + '" data-j="' + j + '"><input aria-label="' + m.name + ' P' + (j + 1) + '" spellcheck="false"></td>';
     h += '</tr>';
@@ -665,7 +665,7 @@ $('#bExport').onclick = async () => {
   const rows = buildRows(), d = diffRows(rows);
   const ext = fmt === 'dcs' ? 'py' : 'txt';
   const text = buildText(rows, fmt);
-  const name = await saveText('FS Register Setting ' + stamp() + '.' + ext, text, ext, fmt === 'dcs' ? 'Python 腳本' : '文字檔');
+  const name = await saveText('補償暫存器設定 ' + stamp() + '.' + ext, text, ext, fmt === 'dcs' ? 'Python 腳本' : '文字檔');
   if (!name) return;
   store.log.push({ t: nowStr(), file: name, fmt, status: d.status.join('\n'), content: d.content.join('\n'), out: buildText(rows, 'reg') });
   store.prev = rows.map(r => ({ row: r.row, cg: r.cg })); store.prevState = JSON.parse(JSON.stringify(S));
@@ -703,11 +703,11 @@ $('#bLogCsv').onclick = () => {
   const csv = '\uFEFF' + [['更新日期', '檔案名稱', '設定變更狀態', '設定變更內容', '產出設定內容']].concat(
     store.log.map(l => [l.t, l.file, l.status, l.content, l.out.replace(/\r\n$/, '').split('\r\n').join('  ')])).map(r => r.map(q).join(',')).join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  a.download = 'FS ExportLog ' + stamp() + '.csv'; a.click();
+  a.download = '補償產出紀錄 ' + stamp() + '.csv'; a.click();
 };
 
 /* ---------- 專案 / txt 載入 ---------- */
-$('#bSave').onclick = () => saveText('FS 調適專案 ' + stamp() + '.json', JSON.stringify({ tool: 'DEMO-DDIC-FS', ver: 1, S, store }, null, 1), 'json', '專案檔').then(n => n && toast('已儲存 ' + n));
+$('#bSave').onclick = () => saveText('補償調適專案 ' + stamp() + '.json', JSON.stringify({ tool: 'DEMO-DDIC-COMP', ver: 1, S, store }, null, 1), 'json', '專案檔').then(n => n && toast('已儲存 ' + n));
 $('#bOpen').onclick = () => $('#fProj').click();
 $('#bLoadTxt').onclick = () => $('#fTxt').click();
 $('#fProj').onchange = async e => {
